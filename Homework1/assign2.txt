@@ -1,0 +1,24 @@
+2.13
+1. In Registers.
+2. In a block in memory with the address passed in a register.
+3. Pushed to the stack.
+
+2.14
+A profiler obtains a statistical profile of the amount of time spent by a program executing different sections of its code by periodically sampling the instruction pointer to determine which code is being executed. The importance of obtaining such a statistical profile is to identify bottlenecks of code that take the program spends most of its time executing and possibly simplify that code to increase performance.
+
+3.9
+
+A state save is performed to save the context. The context is represented in the PCB of the process and includes the value of the CPU registers, the process state, and memory-management information. Then a state restore is performed to bring in the saved state of the new context.
+ 
+3.10
+
+I’ve included the file separately as its dimensions didn’t really work with a PDF.
+
+3.17
+
+The output would be:
+
+CHILD: 0 CHILD: -1 CHILD: -4 CHILD: -9 CHILD: -16 PARENT: 0 PARENT: 1 PARENT: 2 PARENT: 3 PARENT: 4
+
+All one one line because there is no new line character and with all child prints first because of the wait(NULL)
+
