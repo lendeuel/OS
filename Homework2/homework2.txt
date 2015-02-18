@@ -1,0 +1,16 @@
+Len Deuel
+u0789806
+
+6.10
+Because having I/O-bound programs spend signifigant time waiting to be scheduled for their brief CPU time is inefficient, and so I/O-bound programs should have priority to run over CPU bound programs.
+
+6.13
+The advantage of distinct run queues is that you don’t have to worry race conditions on the queue from multiple processors accessing it. The disadvantage is that a processor could have nothing in it’s queue while other processors still have waiting processes. 
+
+6.22
+Making sure the user’s processes’ CPU burst time is below the threshold to remain in queue 0 would maximize the amount of CPU time it gets.
+
+5.20
+a. One race condition could cause the numberofprocesses variable to be incorrect because of read-modify-write races. Another possible race condition is one thread comparing numberofprocesses to maxprocesses right before another thread increments numberofprocesses allowing numberofprocesses to exceed maxprocesses
+
+c. no
