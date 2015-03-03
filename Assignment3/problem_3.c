@@ -42,7 +42,11 @@ void lock(int tid)
         }
     }
     tickets[tid]=m+1;
-    mfence(); //this fence makes sure tickets is set before entering is set back to 0
+    //this fence makes sure tickets is set before entering is set back to 0
+    //if another lock call can read entering as 0 then read tickets as 0 still it breaks the logic of the lock
+    //fences aren't needed between entering is 1 and tickets because it doesn't matter if something reads
+    //the ticket value early as it won't let it break the lock
+    mfence();
     entering[tid]=0;
     for(i=0; i<NUM_THREADS; ++i)
     {
@@ -51,6 +55,11 @@ void lock(int tid)
             while(entering[i])
             {
             }
+            
+            //I couldn't get it to break without this fence, but logically I think its necessary.
+            //If tickets is loaded before entering it could still be zero, then have entering be 1 by the time
+            //it sees it.
+            mfence();
             
             while(tickets[i]!=0 && (tickets[tid]>tickets[i] || (tickets[tid]==tickets[i] && tid>i)))
             {
@@ -73,13 +82,14 @@ void critical_section()
 
 void unlock(int tid)
 {
-    //mfence();
     tickets[tid]=0;
 }
 
 
 void* start(void* arg)
 {
+    //I don't fence here anywhere. I think the relationship between tickets and entering is the only one vulnerable to issues with reordering.
+    
     int tid = (*((thread_data_t* )arg)).tid;
     while(1)
     {
