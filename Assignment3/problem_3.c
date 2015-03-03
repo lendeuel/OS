@@ -41,9 +41,8 @@ void lock(int tid)
             m=tickets[i];
         }
     }
-    //mfence(); //this fence makes sure things see the entering 1 before entering 0
     tickets[tid]=m+1;
-    mfence();
+    mfence(); //this fence makes sure tickets is set before entering is set back to 0
     entering[tid]=0;
     for(i=0; i<NUM_THREADS; ++i)
     {
@@ -74,7 +73,7 @@ void critical_section()
 
 void unlock(int tid)
 {
-    mfence();
+    //mfence();
     tickets[tid]=0;
 }
 
