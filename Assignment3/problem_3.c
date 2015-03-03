@@ -74,6 +74,7 @@ void critical_section()
 
 void unlock(int tid)
 {
+    mfence();
     tickets[tid]=0;
 }
 
