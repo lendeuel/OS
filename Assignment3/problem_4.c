@@ -108,6 +108,7 @@ int main(int argc, char* argv[])
     cs_count = malloc(NUM_THREADS * sizeof(int));
     pthread_t thread_arr[NUM_THREADS];
     spin_lock_t lock;
+    lock.value=0;
     int i;
     for(i=0; i < NUM_THREADS; i++)
     {
