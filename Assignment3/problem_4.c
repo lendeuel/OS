@@ -45,7 +45,7 @@ static inline int atomic_cmpxchg (volatile int *ptr, int old, int new)
 
 void spin_lock(spin_lock_t* s)
 {
-  printf("entering lock\n");
+  //printf("entering lock\n");
   while(atomic_cmpxchg(&(s->value), 0, 1))
   {
       if(sched_yield()<0)
@@ -54,7 +54,7 @@ void spin_lock(spin_lock_t* s)
           exit(-1);
       }
   }
-  printf("acquired lock\n");
+  //printf("acquired lock\n");
 }
 
 void critical_section()
@@ -71,7 +71,7 @@ void critical_section()
 
 void spin_unlock(spin_lock_t* s)
 {
-    printf("exiting lock\n");
+    //printf("exiting lock\n");
     atomic_cmpxchg(&(s->value), 1, 0);
 }
 
