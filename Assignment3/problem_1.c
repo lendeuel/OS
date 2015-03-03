@@ -27,7 +27,8 @@ int NUM_SECONDS;
 void lock(int tid)
 {
     entering[tid]=1;
-    int m, i = 0;
+    int m = 0;
+    int i = 0;
     for(i=0; i<NUM_THREADS; i++)
     {
         if(tickets[i]>m)
