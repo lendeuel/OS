@@ -11,57 +11,74 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sched.h>
+
+typedef struct _spin_lock_t
+{
+    int value;
+    int serving;
+    int top;
+} spin_lock_t;
 
 typedef struct _thread_data_t
 {
     int tid;
+    spin_lock_t* lock;
 } thread_data_t;
 
 volatile int in_cs=0;
-volatile int* tickets;
-volatile int* entering;
 volatile int* cs_count;
 int NUM_THREADS;
 int NUM_SECONDS;
 
-void lock(int tid)
+void mfence ()
 {
-    entering[tid]=1;
-    int m = 0;
-    int i = 0;
-    for(i=0; i<NUM_THREADS; i++)
-    {
-        if(tickets[i]>m)
-        {
-            m=tickets[i];
-        }
-    }
-    tickets[tid]=m+1;
-    entering[tid]=0;
-    for(i=0; i<NUM_THREADS; ++i)
-    {
-        if(i!=tid)
-        {
-            while(entering[i])
-            {
-                if(sched_yield()<0)
-                {
-                    printf("sched_yield failed.\n");
-                    exit(-1);
-                }
-            }
-            
-            while(tickets[i]!=0 && (tickets[tid]>tickets[i] || (tickets[tid]==tickets[i] && tid>i)))
-            {
-                if(sched_yield()<0)
-                {
-                    printf("sched_yield failed.\n");
-                    exit(-1);
-                }
-            }
-        }
-    }
+    asm volatile ("mfence" : : : "memory");
+}
+
+static inline int atomic_cmpxchg (volatile int *ptr, int old, int new)
+{
+    int ret;
+    asm volatile ("lock cmpxchgl %2,%1"
+                  : "=a" (ret), "+m" (*ptr)
+                  : "r" (new), "0" (old)
+                  : "memory");
+    return ret;                            
+}
+
+static inline int atomic_xadd (volatile int *ptr)
+{
+    register int val __asm__("eax") = 1;
+    asm volatile ("lock xaddl %0,%1"
+                  : "+r" (val)
+                  : "m" (*ptr)
+                  : "memory"
+                  );  
+    return val;
+}
+
+void spin_lock(spin_lock_t* s)
+{
+  int number = atomic_xadd(&(s->top))+1;
+  //printf("Assigned number %i\n", number);
+  while(number>s->serving)
+  {
+      if(sched_yield()<0)
+      {
+          printf("sched_yield failed.\n");
+          exit(-1);
+      }
+  }
+  //printf("Number %i now front of line.\n", number);
+  while(atomic_cmpxchg(&(s->value), 0, 1))
+  {
+      if(sched_yield()<0)
+      {
+          printf("sched_yield failed.\n");
+          exit(-1);
+      }
+  }
+  //printf("Number %i now being served.\n", number);
+  atomic_xadd(&(s->serving));
 }
 
 void critical_section()
@@ -76,21 +93,22 @@ void critical_section()
     in_cs=0;
 }
 
-void unlock(int tid)
+void spin_unlock(spin_lock_t* s)
 {
-    tickets[tid]=0;
+    atomic_cmpxchg(&(s->value), 1, 0);
 }
 
 
 void* start(void* arg)
 {
     int tid = (*((thread_data_t* )arg)).tid;
+    spin_lock_t* lock = (*((thread_data_t* )arg)).lock;
     while(1)
     {
-        lock(tid);
+        spin_lock(lock);
         cs_count[tid]++;
         critical_section();
-        unlock(tid);
+        spin_unlock(lock);
     }
 }
 
@@ -110,20 +128,21 @@ int main(int argc, char* argv[])
         return -1;
     }
     thread_data_t data[NUM_THREADS];
-    entering = malloc(NUM_THREADS * sizeof(int));
-    tickets = malloc(NUM_THREADS * sizeof(int));
     cs_count = malloc(NUM_THREADS * sizeof(int));
     pthread_t thread_arr[NUM_THREADS];
+    spin_lock_t lock;
+    lock.value=0;
+    lock.top=0;
+    lock.serving=1;
     int i;
     for(i=0; i < NUM_THREADS; i++)
     {
-        tickets[i]=0;
-        entering[i]=0;
         cs_count[i]=0;
     }
     for(i=0; i < NUM_THREADS; i++)
     {
         data[i].tid = i;
+        data[i].lock = &lock;
         int e = pthread_create(&thread_arr[i], NULL, start, &data[i]);
         if(e)
         {
@@ -137,6 +156,7 @@ int main(int argc, char* argv[])
         printf("Error while sleeping, did not sleep full amount.\n");
         return -1;
     }
+    
     for(i=0; i < NUM_THREADS; i++)
     {
         printf("Thread number %i entered the critical section %i times.\n", i, cs_count[i]);

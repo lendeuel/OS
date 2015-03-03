@@ -88,11 +88,16 @@ int main(int argc, char* argv[])
 {
     if(argc<3)
     {
-        //error
+        printf("Invalid number of arguements\n");
         return -1;
     }
     NUM_THREADS = atoi(argv[1]);
     NUM_SECONDS = atoi(argv[2]);
+    if(NUM_THREADS<1 || NUM_SECONDS <1)
+    {
+        printf("Invalid arguements.\n");
+        return -1;
+    }
     thread_data_t data[NUM_THREADS];
     entering = malloc(NUM_THREADS * sizeof(int));
     tickets = malloc(NUM_THREADS * sizeof(int));
@@ -111,19 +116,14 @@ int main(int argc, char* argv[])
         int e = pthread_create(&thread_arr[i], NULL, start, &data[i]);
         if(e)
         {
-            //error
+            printf("Failed to create threads\n");
             return -1;
         }
     }
     
-    /*for (i = 0; i < NUM_THREADS; ++i)
-    {
-        pthread_join(thr[i], NULL);
-    }*/
-    
     if(sleep(NUM_SECONDS)>0)
     {
-        //error
+        printf("Error while sleeping, did not sleep full amount.\n");
         return -1;
     }
     //switch print method

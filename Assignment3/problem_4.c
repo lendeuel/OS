@@ -47,6 +47,11 @@ void spin_lock(spin_lock_t* s)
 {
   while(atomic_cmpxchg(&(s->value), 0, 1))
   {
+      if(sched_yield()<0)
+      {
+          printf("sched_yield failed.\n");
+          exit(-1);
+      }
   }
 }
 
@@ -86,11 +91,16 @@ int main(int argc, char* argv[])
 {
     if(argc<3)
     {
-        //error
+        printf("Invalid number of arguements\n");
         return -1;
     }
     NUM_THREADS = atoi(argv[1]);
     NUM_SECONDS = atoi(argv[2]);
+    if(NUM_THREADS<1 || NUM_SECONDS <1)
+    {
+        printf("Invalid arguements.\n");
+        return -1;
+    }
     thread_data_t data[NUM_THREADS];
     cs_count = malloc(NUM_THREADS * sizeof(int));
     pthread_t thread_arr[NUM_THREADS];
@@ -107,14 +117,14 @@ int main(int argc, char* argv[])
         int e = pthread_create(&thread_arr[i], NULL, start, &data[i]);
         if(e)
         {
-            //error
+            printf("Failed to create threads\n");
             return -1;
         }
     }
     
     if(sleep(NUM_SECONDS)>0)
     {
-        //error
+        printf("Error while sleeping, did not sleep full amount.\n");
         return -1;
     }
     
