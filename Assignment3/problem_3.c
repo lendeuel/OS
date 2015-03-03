@@ -44,6 +44,7 @@ void lock(int tid)
     mfence();
     tickets[tid]=m+1;
     entering[tid]=0;
+    mfence();
     for(i=0; i<NUM_THREADS; ++i)
     {
         if(i!=tid)
@@ -73,7 +74,6 @@ void critical_section()
 
 void unlock(int tid)
 {
-    mfence();
     tickets[tid]=0;
 }
 
