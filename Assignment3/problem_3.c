@@ -41,7 +41,7 @@ void lock(int tid)
             m=tickets[i];
         }
     }
-    mfence(); //this fence makes sure things see the entering 1 before entering 0
+    //mfence(); //this fence makes sure things see the entering 1 before entering 0
     tickets[tid]=m+1;
     mfence();
     entering[tid]=0;
