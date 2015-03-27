@@ -7,8 +7,22 @@
 //
 
 #include <stdio.h>
-#include <sys/param.h>
-#include <sys/systm.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <limits.h>
+
+int alloc_count=0;
+int free_count=0;
+char dir_name[PATH_MAX+1];
+
+typedef struct dirent_list
+{
+    struct dirent* entry;
+    struct dirent_list* next;
+} dirent_list;
 
 static uint32_t crc32_tab[] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
@@ -67,4 +81,162 @@ uint32_t crc32(uint32_t crc, const void *buf, size_t size)
         crc = crc32_tab[(crc ^ *p++) & 0xFF] ^ (crc >> 8);
     
     return crc ^ ~0U;
+}
+
+void to_upper(char* string)
+{
+    char* cursor = string;
+    while(*cursor)
+    {
+        if((*(cursor))>='a' && (*(cursor))<='z')
+        {
+            (*(cursor))+=('A'-'a');
+        }
+        cursor++;
+    }
+}
+
+void print_dirent_list(dirent_list* root)
+{
+    dirent_list* cursor = root;
+    while(cursor!=NULL)
+    {
+        char fullname[PATH_MAX+1];
+        strcpy(fullname, dir_name);
+        strcat(fullname, cursor->entry->d_name);
+        //printf("fullname is %s\n", fullname);
+        FILE* f = fopen(fullname, "r");
+        if(f==NULL)
+        {
+            printf("%s ACCESS ERROR\n", cursor->entry->d_name);
+        }
+        else
+        {
+            int read_size = 1024;
+            char buf[read_size];
+            uint32_t checksum = 0;
+            while(1)
+            {
+                int read_amount = fread(buf, 1, read_size, f);
+                checksum = crc32(checksum, buf, read_amount);
+                if(read_amount<read_size)
+                {
+                    break;
+                }
+            }
+            printf("%s %08X\n", cursor->entry->d_name, checksum);
+            if(fclose(f)!=0)
+            {
+                printf("Error closing file");
+                exit(-1);
+            }
+        }
+        cursor=cursor->next;
+    }
+}
+
+dirent_list* sort_dirent_list(dirent_list* root)
+{
+    if(root==NULL)
+    {
+        return root;
+    }
+    dirent_list* cursor = root;
+    dirent_list* before_smallest = NULL;
+    dirent_list* smallest = root;
+    while(cursor->next!=NULL)
+    {
+        if(strcmp(cursor->next->entry->d_name, smallest->entry->d_name)<0)
+        {
+            before_smallest=cursor;
+            smallest=cursor->next;
+        }
+        cursor=cursor->next;
+    }
+    if(before_smallest!=NULL)
+    {
+        before_smallest->next = smallest->next;
+        smallest->next = root;
+    }
+    smallest->next = sort_dirent_list(smallest->next);
+    return smallest;
+}
+
+
+void free_dirent_list(dirent_list* root)
+{
+    if(root==NULL)
+    {
+        return;
+    }
+    dirent_list* cursor = root;
+    while(cursor!=NULL)
+    {
+        free_count++;
+        dirent_list* temp = cursor;
+        cursor=cursor->next;
+        free(temp);
+    }
+}
+
+int main(int argc, char* argv[])
+{
+    if(argc<2)
+    {
+        printf("Invalid number of arguements\n");
+        return -1;
+    }
+    char* temp_dir_name = argv[1];
+    int len = strlen(temp_dir_name);
+    strcpy(dir_name, temp_dir_name);
+    if(temp_dir_name[len-1]!='/')
+    {
+        strcat(dir_name, "/");
+    }
+    
+    DIR* dir = opendir(dir_name);
+    
+    if(dir==NULL)
+    {
+        printf("invalid directory\n");
+        return -1;
+    }
+    
+    alloc_count++;
+    struct dirent_list* root = (dirent_list*)malloc(sizeof(dirent_list));
+    struct dirent_list* cursor = root;
+    struct dirent_list* last=NULL;
+    
+    while((cursor->entry=readdir(dir))!=NULL)
+    {
+        if(cursor->entry->d_type==DT_REG)
+        {
+            last=cursor;
+            alloc_count++;
+            cursor=(dirent_list*)malloc(sizeof(dirent_list));
+            last->next = cursor;
+        }
+    }
+    free_count++;
+    free(cursor);
+    last->next=NULL;
+    
+    dirent_list* sorted_list = sort_dirent_list(root);
+    
+    print_dirent_list(sorted_list);
+    
+    free_dirent_list(sorted_list);
+    
+    int v = closedir(dir);
+    
+    if(v<0)
+    {
+        printf("error closing directory\n");
+        return -1;
+    }
+    if(alloc_count!=free_count)
+    {
+        printf("memory leak\n");
+    }
+    return 1;
 }

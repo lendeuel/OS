@@ -238,11 +238,9 @@ int main(int argc, char* argv[])
         return -1;
     }
     go=0;
+    for(i=0; i < NUM_CATS+NUM_DOGS+NUM_BIRDS; i++)
     {
-        for(i=0; i < NUM_CATS+NUM_DOGS+NUM_BIRDS; i++)
-        {
-            pthread_join(data[i].thread, NULL);
-        }
+        pthread_join(data[i].thread, NULL);
     }
     for(i=0; i < NUM_CATS+NUM_DOGS+NUM_BIRDS; i++)
     {
