@@ -242,21 +242,25 @@ int main(int argc, char* argv[])
     {
         pthread_join(data[i].thread, NULL);
     }
+    int cat_total=0;
+    int bird_total=0;
+    int dog_total=0;
     for(i=0; i < NUM_CATS+NUM_DOGS+NUM_BIRDS; i++)
     {
         if(i<NUM_CATS)
         {
-            printf("A cat (thread number %i) entered the critical section %i times.\n", i, data[i].count);
+            cat_total+=data[i].count;
         }
         else if(i<(NUM_DOGS+NUM_CATS))
         {
-            printf("A dog (thread number %i) entered the critical section %i times.\n", i, data[i].count);
+            dog_total+=data[i].count;
         }
         else
         {
-            printf("A bird (thread number %i) entered the critical section %i times.\n", i, data[i].count);
+            bird_total+=data[i].count;
         }
     }
+    printf("cat played = %i, dog played = %i, bird played = %i\n", cat_total, dog_total, bird_total);
     return 1;
 }
 

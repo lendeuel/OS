@@ -14,16 +14,26 @@
 #include <sys/stat.h>
 #include <limits.h>
 #include <stdint.h>
+#include <pthread.h>
+
+typedef struct dirent_list
+{
+    char* output;
+    struct dirent* entry;
+    struct dirent_list* next;
+} dirent_list;
+
+typedef struct thread_info
+{
+    pthread_t thread;
+    dirent_list* current_target;
+    pthread_mutex_t* lock;
+} thread_info;
 
 int alloc_count=0;
 int free_count=0;
 char dir_name[PATH_MAX+1];
-
-typedef struct dirent_list
-{
-    struct dirent* entry;
-    struct dirent_list* next;
-} dirent_list;
+dirent_list* global_cursor;
 
 static uint32_t crc32_tab[] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
@@ -97,46 +107,54 @@ void to_upper(char* string)
     }
 }
 
+void set_output(dirent_list* cursor)
+{
+    //printf("processing %s\n", cursor->entry->d_name);
+    alloc_count++;
+    cursor->output = malloc(sizeof(char)*(strlen(cursor->entry->d_name)+11));
+    char fullname[PATH_MAX+1];
+    strcpy(fullname, dir_name);
+    strcat(fullname, cursor->entry->d_name);
+    //printf("fullname is %s\n", fullname);
+    FILE* f = fopen(fullname, "r");
+    if(f==NULL)
+    {
+        sprintf(cursor->output, "%s ACCESS ERROR\n", cursor->entry->d_name);
+    }
+    else
+    {
+        int read_size = 1024;
+        char buf[read_size];
+        uint32_t checksum = 0;
+        while(1)
+        {
+            int read_amount = fread(buf, 1, read_size, f);
+            if(ferror(f)!=0)
+            {
+                sprintf(cursor->output, "%s ACCESS ERROR\n", cursor->entry->d_name);
+                return;
+            }
+            checksum = crc32(checksum, buf, read_amount);
+            if(read_amount<read_size)
+            {
+                break;
+            }
+        }
+        sprintf(cursor->output, "%s %08X\n", cursor->entry->d_name, checksum);
+        if(fclose(f)!=0)
+        {
+            printf("Error closing file");
+            exit(-1);
+        }
+    }
+}
+
 void print_dirent_list(dirent_list* root)
 {
     dirent_list* cursor = root;
     while(cursor!=NULL)
     {
-        char fullname[PATH_MAX+1];
-        strcpy(fullname, dir_name);
-        strcat(fullname, cursor->entry->d_name);
-        //printf("fullname is %s\n", fullname);
-        FILE* f = fopen(fullname, "r");
-        if(f==NULL)
-        {
-            printf("%s ACCESS ERROR\n", cursor->entry->d_name);
-        }
-        else
-        {
-            int read_size = 1024;
-            char buf[read_size];
-            uint32_t checksum = 0;
-            while(1)
-            {
-                int read_amount = fread(buf, 1, read_size, f);
-                if(ferror(f)!=0)
-                {
-                    printf("Read error on file\n");
-                    exit(-1);
-                }
-                checksum = crc32(checksum, buf, read_amount);
-                if(read_amount<read_size)
-                {
-                    break;
-                }
-            }
-            printf("%s %08X\n", cursor->entry->d_name, checksum);
-            if(fclose(f)!=0)
-            {
-                printf("Error closing file");
-                exit(-1);
-            }
-        }
+        printf("%s", cursor->output);
         cursor=cursor->next;
     }
 }
@@ -179,20 +197,55 @@ void free_dirent_list(dirent_list* root)
     while(cursor!=NULL)
     {
         free_count++;
+        free(cursor->output);
+        free_count++;
         dirent_list* temp = cursor;
         cursor=cursor->next;
         free(temp);
     }
 }
 
+void target_get(thread_info* info)
+{
+    pthread_mutex_lock(info->lock);
+    info->current_target = global_cursor;
+    if(global_cursor!=NULL)
+    {
+        global_cursor = global_cursor->next;
+    }
+    pthread_mutex_unlock(info->lock);
+}
+
+void* start(void* arg)
+{
+    thread_info* info = ((thread_info* )arg);
+    
+    while(1)
+    {
+        target_get(info);
+        if(info->current_target==NULL)
+        {
+            return NULL;
+        }
+        set_output(info->current_target);
+    }
+ 
+}
+
 int main(int argc, char* argv[])
 {
-    if(argc<2)
+    if(argc<3)
     {
         printf("Invalid number of arguements\n");
         return -1;
     }
     char* temp_dir_name = argv[1];
+    int NUM_THREADS = atoi(argv[2]);
+    if(NUM_THREADS<1)
+    {
+        printf("Invaild number of threads\n");
+        return -1;
+    }
     int len = strlen(temp_dir_name);
     strcpy(dir_name, temp_dir_name);
     if(temp_dir_name[len-1]!='/')
@@ -228,6 +281,29 @@ int main(int argc, char* argv[])
     last->next=NULL;
     
     dirent_list* sorted_list = sort_dirent_list(root);
+    
+    global_cursor = sorted_list;
+    
+    //build output here
+    pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+    
+    thread_info threads[NUM_THREADS];
+    for(int i=0; i<NUM_THREADS; i++)
+    {
+        threads[i].lock = &lock;
+        int e = pthread_create(&(threads[i].thread), NULL, start, &threads[i]);
+        if(e)
+        {
+            printf("Failed to create threads\n");
+            return -1;
+        }
+    }
+    
+    
+    for(int i=0; i < NUM_THREADS; i++)
+    {
+        pthread_join(threads[i].thread, NULL);
+    }
     
     print_dirent_list(sorted_list);
     
