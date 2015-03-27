@@ -13,6 +13,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <limits.h>
+#include <stdint.h>
 
 int alloc_count=0;
 int free_count=0;
