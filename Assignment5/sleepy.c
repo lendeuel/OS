@@ -1,4 +1,4 @@
-/* cfake.c - implementation of a simple module for a character device 
+/* cfake.c - implementation of a simple module for a character device
  * can be used for testing, demonstrations, etc.
  */
 
@@ -27,6 +27,7 @@
 #include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/mutex.h>
+#include <linux/wait.h>
 
 #include <asm/uaccess.h>
 
@@ -48,22 +49,25 @@ static struct sleepy_dev *sleepy_devices = NULL;
 static struct class *sleepy_class = NULL;
 /* ================================================================ */
 
+//I'm adding this hope that's ok
+static wait_queue_head_t waitQueues[SLEEPY_NDEVICES];
+
 int 
 sleepy_open(struct inode *inode, struct file *filp)
 {
   unsigned int mj = imajor(inode);
   unsigned int mn = iminor(inode);
-	
+     
   struct sleepy_dev *dev = NULL;
-	
+     
   if (mj != sleepy_major || mn < 0 || mn >= sleepy_ndevices)
     {
       printk(KERN_WARNING "[target] "
-	     "No device found with minor=%d and major=%d\n", 
-	     mj, mn);
+          "No device found with minor=%d and major=%d\n", 
+          mj, mn);
       return -ENODEV; /* No such device */
     }
-	
+     
   /* store a pointer to struct sleepy_dev here for other methods */
   dev = &sleepy_devices[mn];
   filp->private_data = dev; 
@@ -73,7 +77,7 @@ sleepy_open(struct inode *inode, struct file *filp)
       printk(KERN_WARNING "[target] open: internal error\n");
       return -ENODEV; /* No such device */
     }
-	
+     
   return 0;
 }
 
@@ -85,36 +89,47 @@ sleepy_release(struct inode *inode, struct file *filp)
 
 ssize_t 
 sleepy_read(struct file *filp, char __user *buf, size_t count, 
-	    loff_t *f_pos)
+         loff_t *f_pos)
 {
   struct sleepy_dev *dev = (struct sleepy_dev *)filp->private_data;
   ssize_t retval = 0;
-	
+     
   if (mutex_lock_killable(&dev->sleepy_mutex))
     return -EINTR;
-	
+     
   /* YOUR CODE HERE */
-
+  wake_up_interruptible(waitQueues[MINOR(dev->cdev->dev)]);
   /* END YOUR CODE */
-	
+     
   mutex_unlock(&dev->sleepy_mutex);
   return retval;
 }
                 
 ssize_t 
 sleepy_write(struct file *filp, const char __user *buf, size_t count, 
-	     loff_t *f_pos)
+          loff_t *f_pos)
 {
   struct sleepy_dev *dev = (struct sleepy_dev *)filp->private_data;
   ssize_t retval = 0;
-	
+     
   if (mutex_lock_killable(&dev->sleepy_mutex))
     return -EINTR;
-	
+  
   /* YOUR CODE HERE */
-
+    if(count!=4)
+    {
+         return EINVAL;
+    }
+    int sleepSeconds = *(int*)buf;
+    if(sleepSeconds<=0)
+    {
+         return 0;
+    }
+    int sleepRemaining =  wait_event_interruptible_timeout(waitQueues[MINOR(dev->cdev->dev)], 1, sleepSeconds/*not the correct value*/)
+    return sleepRemaining/*not the correct value*/;
+    
   /* END YOUR CODE */
-	
+     
   mutex_unlock(&dev->sleepy_mutex);
   return retval;
 }
@@ -141,11 +156,15 @@ struct file_operations sleepy_fops = {
  */
 static int
 sleepy_construct_device(struct sleepy_dev *dev, int minor, 
-			struct class *class)
+               struct class *class)
 {
   int err = 0;
   dev_t devno = MKDEV(sleepy_major, minor);
   struct device *device = NULL;
+  
+     //Adding code here also
+     init_waitqueue_head(&waitQueues[minor])
+     //hope this was ok
     
   BUG_ON(dev == NULL || class == NULL);
 
@@ -160,18 +179,18 @@ sleepy_construct_device(struct sleepy_dev *dev, int minor,
   if (err)
     {
       printk(KERN_WARNING "[target] Error %d while trying to add %s%d",
-	     err, SLEEPY_DEVICE_NAME, minor);
+          err, SLEEPY_DEVICE_NAME, minor);
       return err;
     }
 
   device = device_create(class, NULL, /* no parent device */ 
-			 devno, NULL, /* no additional data */
-			 SLEEPY_DEVICE_NAME "%d", minor);
+                devno, NULL, /* no additional data */
+                SLEEPY_DEVICE_NAME "%d", minor);
 
   if (IS_ERR(device)) {
     err = PTR_ERR(device);
     printk(KERN_WARNING "[target] Error %d while trying to create %s%d",
-	   err, SLEEPY_DEVICE_NAME, minor);
+        err, SLEEPY_DEVICE_NAME, minor);
     cdev_del(&dev->cdev);
     return err;
   }
@@ -181,7 +200,7 @@ sleepy_construct_device(struct sleepy_dev *dev, int minor,
 /* Destroy the device and free its buffer */
 static void
 sleepy_destroy_device(struct sleepy_dev *dev, int minor,
-		      struct class *class)
+                struct class *class)
 {
   BUG_ON(dev == NULL || class == NULL);
   device_destroy(class, MKDEV(sleepy_major, minor));
@@ -195,7 +214,7 @@ static void
 sleepy_cleanup_module(int devices_to_destroy)
 {
   int i;
-	
+     
   /* Get rid of character devices (if any exist) */
   if (sleepy_devices) {
     for (i = 0; i < devices_to_destroy; ++i) {
@@ -220,15 +239,15 @@ sleepy_init_module(void)
   int i = 0;
   int devices_to_destroy = 0;
   dev_t dev = 0;
-	
+     
   if (sleepy_ndevices <= 0)
     {
       printk(KERN_WARNING "[target] Invalid value of sleepy_ndevices: %d\n", 
-	     sleepy_ndevices);
+          sleepy_ndevices);
       err = -EINVAL;
       return err;
     }
-	
+     
   /* Get a range of minor numbers (starting with 0) to work with */
   err = alloc_chrdev_region(&dev, 0, sleepy_ndevices, SLEEPY_DEVICE_NAME);
   if (err < 0) {
@@ -243,16 +262,16 @@ sleepy_init_module(void)
     err = PTR_ERR(sleepy_class);
     goto fail;
   }
-	
+     
   /* Allocate the array of devices */
   sleepy_devices = (struct sleepy_dev *)kzalloc(
-						sleepy_ndevices * sizeof(struct sleepy_dev), 
-						GFP_KERNEL);
+                              sleepy_ndevices * sizeof(struct sleepy_dev), 
+                              GFP_KERNEL);
   if (sleepy_devices == NULL) {
     err = -ENOMEM;
     goto fail;
   }
-	
+     
   /* Construct devices */
   for (i = 0; i < sleepy_ndevices; ++i) {
     err = sleepy_construct_device(&sleepy_devices[i], i, sleepy_class);
