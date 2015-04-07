@@ -57,7 +57,7 @@ static struct class *shady_class = NULL;
 
 //more stuff rom assignment description
 asmlinkage int (*old_open) (const char*, int, int);
-asmlinkage ssize_t (old_write) (int fd, const void *buf, size_t count);
+asmlinkage ssize_t (*old_write) (int fd, const void *buf, size_t count);
 
 asmlinkage ssize_t my_write(int fd, const void *buf, size_t count)
 {
