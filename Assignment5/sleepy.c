@@ -101,7 +101,7 @@ sleepy_read(struct file *filp, char __user *buf, size_t count,
      
   /* YOUR CODE HERE */
   {
-       wake_up_interruptible(waitQueues[MINOR(dev->cdev.dev)]);
+       wake_up_interruptible(&waitQueues[MINOR(dev->cdev.dev)]);
   }
   /* END YOUR CODE */
      
