@@ -52,7 +52,7 @@ static struct class *sleepy_class = NULL;
 /* ================================================================ */
 
 //I'm adding this hope that's ok
-static wait_queue_head_t waitQueues[SLEEPY_NDEVICES];
+static wait_queue_head_t* waitQueues[SLEEPY_NDEVICES];
 
 int 
 sleepy_open(struct inode *inode, struct file *filp)
@@ -93,6 +93,9 @@ ssize_t
 sleepy_read(struct file *filp, char __user *buf, size_t count, 
          loff_t *f_pos)
 {
+//my variables
+  wait_queue_head_t* ptr;
+//end
   struct sleepy_dev *dev = (struct sleepy_dev *)filp->private_data;
   ssize_t retval = 0;
      
@@ -101,7 +104,6 @@ sleepy_read(struct file *filp, char __user *buf, size_t count,
      
   /* YOUR CODE HERE */
   {
-       wait_queue_head_t* ptr;
        ptr = &waitQueues[MINOR(dev->cdev.dev)];
        wake_up_interruptible(ptr);
   }
@@ -115,6 +117,12 @@ ssize_t
 sleepy_write(struct file *filp, const char __user *buf, size_t count, 
           loff_t *f_pos)
 {
+/*some variables*/
+     int sleepSeconds;
+     wait_queue_head_t* ptr;
+     int sleepRemaining;
+//end
+
   struct sleepy_dev *dev = (struct sleepy_dev *)filp->private_data;
   ssize_t retval = 0;
      
@@ -122,22 +130,18 @@ sleepy_write(struct file *filp, const char __user *buf, size_t count,
     return -EINTR;
   
   /* YOUR CODE HERE */
-  {
     if(count!=4)
     {
          return EINVAL;
     }
-    int sleepSeconds;
     sleepSeconds = *(int*)buf;
     if(sleepSeconds<=0)
     {
          return 0;
     }
-    wait_queue_head_t* ptr;
     ptr = &waitQueues[MINOR(dev->cdev.dev)];
-    int sleepRemaining =  wait_event_interruptible_timeout(ptr, 1, sleepSeconds/*not the correct value*/);
+    sleepRemaining =  wait_event_interruptible_timeout(ptr, 1, sleepSeconds/*not the correct value*/);
     return sleepRemaining/*not the correct value*/;
-  }
   /* END YOUR CODE */
      
   mutex_unlock(&dev->sleepy_mutex);
@@ -173,7 +177,7 @@ sleepy_construct_device(struct sleepy_dev *dev, int minor,
   struct device *device = NULL;
   
      //Adding code here also
-     init_waitqueue_head(&waitQueues[minor])
+     init_waitqueue_head(waitQueues[minor])
      //hope this was ok
     
   BUG_ON(dev == NULL || class == NULL);
