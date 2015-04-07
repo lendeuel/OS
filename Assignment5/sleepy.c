@@ -100,7 +100,8 @@ sleepy_read(struct file *filp, char __user *buf, size_t count,
     return -EINTR;
      
   /* YOUR CODE HERE */
-  wait_queue_head_t* ptr = &waitQueues[MINOR(dev->cdev.dev)];
+  wait_queue_head_t* ptr
+  ptr = &waitQueues[MINOR(dev->cdev.dev)];
   wake_up_interruptible(ptr);
   /* END YOUR CODE */
      
@@ -129,7 +130,8 @@ sleepy_write(struct file *filp, const char __user *buf, size_t count,
     {
          return 0;
     }
-    wait_queue_head_t* ptr = &waitQueues[MINOR(dev->cdev.dev)];
+    wait_queue_head_t* ptr;
+    ptr = &waitQueues[MINOR(dev->cdev.dev)];
     int sleepRemaining =  wait_event_interruptible_timeout(ptr, 1, sleepSeconds/*not the correct value*/);
     return sleepRemaining/*not the correct value*/;
     
