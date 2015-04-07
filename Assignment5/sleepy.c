@@ -98,7 +98,7 @@ sleepy_read(struct file *filp, char __user *buf, size_t count,
     return -EINTR;
      
   /* YOUR CODE HERE */
-  wake_up_interruptible(waitQueues[MINOR(dev->cdev->dev)]);
+  wake_up_interruptible(waitQueues[MINOR(dev->cdev.dev)]);
   /* END YOUR CODE */
      
   mutex_unlock(&dev->sleepy_mutex);
@@ -125,7 +125,7 @@ sleepy_write(struct file *filp, const char __user *buf, size_t count,
     {
          return 0;
     }
-    int sleepRemaining =  wait_event_interruptible_timeout(waitQueues[MINOR(dev->cdev->dev)], 1, sleepSeconds/*not the correct value*/)
+    int sleepRemaining =  wait_event_interruptible_timeout(waitQueues[MINOR(dev->cdev.dev)], 1, sleepSeconds/*not the correct value*/)
     return sleepRemaining/*not the correct value*/;
     
   /* END YOUR CODE */
