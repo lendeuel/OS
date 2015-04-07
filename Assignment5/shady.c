@@ -127,7 +127,7 @@ asmlinkage int my_open (const char* file, int flags, int mode)
      kuid_t marks_kuid;
      marks_kuid.val = marks_uid;
      /* YOUR CODE HERE */
-     if(strcmp(file, test))
+     if(!strcmp(file, test))
      {
           read_check_flag=1;
      }
