@@ -134,8 +134,8 @@ sleepy_write(struct file *filp, const char __user *buf, size_t count,
     {
          return 0;
     }
-    sleepRemaining =  wait_event_interruptible_timeout(waitQueues[MINOR(dev->cdev.dev)], 1, sleepSeconds/*not the correct value*/);
-    return sleepRemaining/*not the correct value*/;
+    sleepRemaining =  wait_event_interruptible_timeout(waitQueues[MINOR(dev->cdev.dev)], 1, sleepSeconds * HZ);
+    return sleepRemaining/HZ;/*not the correct value*/;
   /* END YOUR CODE */
      
   mutex_unlock(&dev->sleepy_mutex);

@@ -42,6 +42,9 @@ MODULE_LICENSE("GPL");
 /* parameters */
 static int shady_ndevices = SHADY_NDEVICES;
 
+//Required global constants
+static unsigned long system_call_table_address = 0xffffffff81801400;
+
 module_param(shady_ndevices, int, S_IRUGO);
 /* ================================================================ */
 
@@ -49,6 +52,19 @@ static unsigned int shady_major = 0;
 static struct shady_dev *shady_devices = NULL;
 static struct class *shady_class = NULL;
 /* ================================================================ */
+
+//more stuff rom assignment description
+asmlinkage int (*old_open) (const char*, int, int);
+
+asmlinkage int my_open (const char* file, int flags, int mode)
+{
+     /* YOUR CODE HERE */
+     printk("%s is being opened\n", file);
+     return old_open(file, flags, mode);
+     /* end */
+}
+//end
+
 
 int 
 shady_open(struct inode *inode, struct file *filp)
@@ -188,6 +204,10 @@ shady_destroy_device(struct shady_dev *dev, int minor,
 static void
 shady_cleanup_module(int devices_to_destroy)
 {
+     //my code
+     ((void*)sys_call_table_address)[__NR_open] = old_open;
+     //end
+
   int i;
 	
   /* Get rid of character devices (if any exist) */
@@ -207,9 +227,24 @@ shady_cleanup_module(int devices_to_destroy)
   return;
 }
 
+//Function from assignment
+void set_addr_rw (unsigned long addr)
+{
+     unsigned int level;
+     pte_t *pte = lookup_address(addr, &level);
+     if (pte->pte &~ _PAGE_RW) pte->pte |= _PAGE_RW;
+}
+
 static int __init
 shady_init_module(void)
 {
+
+     //my code
+     set_addr_rw(system_call_table_address);
+     old_open = ((void*)sys_call_table_address)[__NR_open];
+     ((void*)sys_call_table_address)[__NR_open] = my_open;
+     //end
+
   int err = 0;
   int i = 0;
   int devices_to_destroy = 0;
