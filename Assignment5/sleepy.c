@@ -171,10 +171,10 @@ sleepy_construct_device(struct sleepy_dev *dev, int minor,
   struct device *device = NULL;
   
      //Adding code here also
-     init_waitqueue_head(&waitQueues[minor])
+     init_waitqueue_head(&waitQueues[minor]);
      //hope this was ok
     
-  //BUG_ON(dev == NULL || class == NULL);
+  BUG_ON(dev == NULL || class == NULL);
 
   /* Memory is to be allocated when the device is opened the first time */
   dev->data = NULL;     
