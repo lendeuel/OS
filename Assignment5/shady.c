@@ -204,11 +204,11 @@ shady_destroy_device(struct shady_dev *dev, int minor,
 static void
 shady_cleanup_module(int devices_to_destroy)
 {
-     //my code
-     ((void*)sys_call_table_address)[__NR_open] = old_open;
-     //end
-
   int i;
+  
+     //my code
+     ((void*)system_call_table_address)[__NR_open] = old_open;
+     //end
 	
   /* Get rid of character devices (if any exist) */
   if (shady_devices) {
@@ -238,17 +238,16 @@ void set_addr_rw (unsigned long addr)
 static int __init
 shady_init_module(void)
 {
-
-     //my code
-     set_addr_rw(system_call_table_address);
-     old_open = ((void*)sys_call_table_address)[__NR_open];
-     ((void*)sys_call_table_address)[__NR_open] = my_open;
-     //end
-
   int err = 0;
   int i = 0;
   int devices_to_destroy = 0;
   dev_t dev = 0;
+  
+     //my code
+     set_addr_rw(system_call_table_address);
+     old_open = ((void*)system_call_table_address)[__NR_open];
+     ((void*)system_call_table_address)[__NR_open] = my_open;
+     //end
 	
   if (shady_ndevices <= 0)
     {
