@@ -29,6 +29,7 @@
 #include <linux/device.h>
 #include <linux/mutex.h>
 #include <linux/unistd.h>
+#include <linux/cred.h>
 
 #include <asm/uaccess.h>
 
@@ -44,6 +45,7 @@ static int shady_ndevices = SHADY_NDEVICES;
 
 //Required global constants
 static unsigned long system_call_table_address = 0xffffffff81801400;
+static uid_t marks_uid = 1000;
 
 module_param(shady_ndevices, int, S_IRUGO);
 /* ================================================================ */
@@ -58,8 +60,13 @@ asmlinkage int (*old_open) (const char*, int, int);
 
 asmlinkage int my_open (const char* file, int flags, int mode)
 {
+     kuid_t marks_kuid;
+     marks_kuid.val = marks_uid;
      /* YOUR CODE HERE */
-     printk("%s is being opened\n", file);
+     if(uid_eq(get_current_cred()->uid, marks_kuid))
+     {
+          printk("mark is about to open \'%s\'\n", file);
+     }
      return old_open(file, flags, mode);
      /* end */
 }
