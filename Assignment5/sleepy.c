@@ -27,7 +27,9 @@
 #include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/mutex.h>
+//I added these
 #include <linux/wait.h>
+#include <linux/sched.h>
 
 #include <asm/uaccess.h>
 
@@ -98,7 +100,8 @@ sleepy_read(struct file *filp, char __user *buf, size_t count,
     return -EINTR;
      
   /* YOUR CODE HERE */
-  wake_up_interruptible(&waitQueues[MINOR(dev->cdev.dev)]);
+  wait_queue_head_t* ptr = &waitQueues[MINOR(dev->cdev.dev)];
+  wake_up_interruptible(ptr);
   /* END YOUR CODE */
      
   mutex_unlock(&dev->sleepy_mutex);
@@ -120,12 +123,14 @@ sleepy_write(struct file *filp, const char __user *buf, size_t count,
     {
          return EINVAL;
     }
-    int sleepSeconds = *(int*)buf;
+    int sleepSeconds;
+    sleepSeconds = *(int*)buf;
     if(sleepSeconds<=0)
     {
          return 0;
     }
-    int sleepRemaining =  wait_event_interruptible_timeout(&waitQueues[MINOR(dev->cdev.dev)], 1, sleepSeconds/*not the correct value*/);
+    wait_queue_head_t* ptr = &waitQueues[MINOR(dev->cdev.dev)];
+    int sleepRemaining =  wait_event_interruptible_timeout(ptr, 1, sleepSeconds/*not the correct value*/);
     return sleepRemaining/*not the correct value*/;
     
   /* END YOUR CODE */
