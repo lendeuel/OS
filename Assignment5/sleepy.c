@@ -139,10 +139,10 @@ sleepy_write(struct file *filp, const char __user *buf, size_t count,
          return 0;
     }
      printk("device %d going to sleep\n", MINOR(dev->cdev.dev));
+     flags[MINOR(dev->cdev.dev)]=0;
     sleepRemaining =  wait_event_interruptible_timeout(waitQueues[MINOR(dev->cdev.dev)], flags[MINOR(dev->cdev.dev)], sleepSeconds * HZ);
      retval = sleepRemaining/HZ;
     printk("woke up with %d seconds remaining\n", retval);
-     flags[MINOR(dev->cdev.dev)]=0;
   /* END YOUR CODE */
      
   mutex_unlock(&dev->sleepy_mutex);
