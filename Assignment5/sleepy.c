@@ -118,6 +118,8 @@ sleepy_write(struct file *filp, const char __user *buf, size_t count,
      int sleepRemaining;
 //end
 
+     printk("entered write\n");
+
   struct sleepy_dev *dev = (struct sleepy_dev *)filp->private_data;
   ssize_t retval = 0;
      
