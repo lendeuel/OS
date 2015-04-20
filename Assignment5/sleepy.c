@@ -53,6 +53,7 @@ static struct class *sleepy_class = NULL;
 
 //I'm adding this hope that's ok
 static wait_queue_head_t waitQueues[SLEEPY_NDEVICES];
+static int flags[SLEEPY_NDEVICES];
 
 int 
 sleepy_open(struct inode *inode, struct file *filp)
@@ -101,7 +102,9 @@ sleepy_read(struct file *filp, char __user *buf, size_t count,
      
   /* YOUR CODE HERE */
   printk("waking up device %d in read\n", MINOR(dev->cdev.dev));
+  flags[MINOR(dev->cdev.dev)]=1;
   wake_up_interruptible(&waitQueues[MINOR(dev->cdev.dev)]);
+  flags[MINOR(dev->cdev.dev)]=0;
   /* END YOUR CODE */
      
   //mutex_unlock(&dev->sleepy_mutex);
@@ -137,7 +140,7 @@ sleepy_write(struct file *filp, const char __user *buf, size_t count,
          return 0;
     }
      printk("device %d going to sleep\n", MINOR(dev->cdev.dev));
-    sleepRemaining =  wait_event_interruptible_timeout(waitQueues[MINOR(dev->cdev.dev)], 0, sleepSeconds * HZ);
+    sleepRemaining =  wait_event_interruptible_timeout(waitQueues[MINOR(dev->cdev.dev)], flags[MINOR(dev->cdev.dev)], sleepSeconds * HZ);
      retval = sleepRemaining/HZ;
     printk("woke up with %d seconds remaining\n", retval);
   /* END YOUR CODE */
@@ -176,6 +179,7 @@ sleepy_construct_device(struct sleepy_dev *dev, int minor,
   
      //Adding code here also
      init_waitqueue_head(&waitQueues[minor]);
+     flags[minor]=0;
      //hope this was ok
     
   BUG_ON(dev == NULL || class == NULL);
