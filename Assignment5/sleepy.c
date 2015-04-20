@@ -137,7 +137,7 @@ sleepy_write(struct file *filp, const char __user *buf, size_t count,
          return 0;
     }
      printk("going to sleep\n");
-    sleepRemaining =  wait_event_interruptible_timeout(waitQueues[MINOR(dev->cdev.dev)], 1, sleepSeconds * HZ);
+    sleepRemaining =  wait_event_interruptible_timeout(waitQueues[MINOR(dev->cdev.dev)], 0, sleepSeconds * HZ);
      retval = sleepRemaining/HZ;
     printk("woke up with %d seconds remaining\n", retval);
   /* END YOUR CODE */
