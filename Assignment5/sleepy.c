@@ -96,15 +96,15 @@ sleepy_read(struct file *filp, char __user *buf, size_t count,
   struct sleepy_dev *dev = (struct sleepy_dev *)filp->private_data;
   ssize_t retval = 0;
      
-  if (mutex_lock_killable(&dev->sleepy_mutex))
-    return -EINTR;
+  //if (mutex_lock_killable(&dev->sleepy_mutex))
+    //return -EINTR;
      
   /* YOUR CODE HERE */
   printk("waking up device %d in read\n", MINOR(dev->cdev.dev));
   wake_up_interruptible(&waitQueues[MINOR(dev->cdev.dev)]);
   /* END YOUR CODE */
      
-  mutex_unlock(&dev->sleepy_mutex);
+  //mutex_unlock(&dev->sleepy_mutex);
   return retval;
 }
                 
