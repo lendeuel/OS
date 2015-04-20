@@ -100,7 +100,7 @@ sleepy_read(struct file *filp, char __user *buf, size_t count,
     return -EINTR;
      
   /* YOUR CODE HERE */
-  printk("waking up sleepy things in read\n");
+  printk("waking up device %d in read\n", MINOR(dev->cdev.dev));
   wake_up_interruptible(&waitQueues[MINOR(dev->cdev.dev)]);
   /* END YOUR CODE */
      
@@ -136,7 +136,7 @@ sleepy_write(struct file *filp, const char __user *buf, size_t count,
     {
          return 0;
     }
-     printk("going to sleep\n");
+     printk("device %d going to sleep\n", MINOR(dev->cdev.dev));
     sleepRemaining =  wait_event_interruptible_timeout(waitQueues[MINOR(dev->cdev.dev)], 0, sleepSeconds * HZ);
      retval = sleepRemaining/HZ;
     printk("woke up with %d seconds remaining\n", retval);
